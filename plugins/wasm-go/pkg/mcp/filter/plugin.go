@@ -196,9 +196,6 @@ func Initialize() {
 	if globalContext.parseFilterConfig == nil {
 		panic("SetConfigParser not set")
 	}
-	if globalContext.jsonRpcRequestFilter == nil && globalContext.jsonRpcResponseFilter == nil {
-		panic("At least one of SetRequestFilter or SetResponseFilter needs to be set.")
-	}
 	var configOption wrapper.CtxOption[mcpFilterConfig]
 	if globalContext.parseFilterRuleOverrideConfig == nil {
 		configOption = wrapper.ParseRawConfig(parseRawConfig)
