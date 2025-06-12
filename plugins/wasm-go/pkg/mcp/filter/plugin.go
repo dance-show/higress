@@ -260,6 +260,7 @@ func installHandler(config *mcpFilterConfig) {
 			return types.ActionContinue
 		}
 	}
+	log.Debugf("installHandler called, config is: %#v", config)
 }
 
 func parseRawConfig(configBytes []byte, config *mcpFilterConfig) error {
@@ -289,17 +290,22 @@ func parseOverrideConfig(configBytes []byte, global mcpFilterConfig, config *mcp
 }
 
 func onHttpRequestHeaders(ctx wrapper.HttpContext, config mcpFilterConfig) types.Action {
+	log.Debugf("onHttpRequestHeaders called")
 	if !wrapper.HasRequestBody() || (config.httpRequestHandler == nil && config.jsonRpcRequestHandler == nil) {
+		log.Debugf("no request body or no handler, skip reading body")
 		ctx.DontReadRequestBody()
 		return types.ActionContinue
 	}
+	log.Debugf("has request body and handler, read body")
 	ctx.SetRequestBodyBufferLimit(defaultMaxBodyBytes)
 	return types.HeaderStopIteration
 }
 
 func onHttpRequestBody(ctx wrapper.HttpContext, config mcpFilterConfig, body []byte) types.Action {
+	log.Debugf("onHttpRequestBody called, body size: %d", len(body))
 	if !gjson.GetBytes(body, "jsonrpc").Exists() {
 		if config.httpRequestHandler != nil {
+			log.Debugf("body is not jsonrpc, using httpRequestHandler")
 			headers, err := proxywasm.GetHttpRequestHeaders()
 			if err != nil {
 				log.Errorf("get request headers failed, err:%v", err)
@@ -307,23 +313,30 @@ func onHttpRequestBody(ctx wrapper.HttpContext, config mcpFilterConfig, body []b
 			}
 			return config.httpRequestHandler(ctx, config.config, headers, body)
 		}
+		log.Debugf("body is not jsonrpc, but no httpRequestHandler, skip")
 		return types.ActionContinue
 	}
+	log.Debugf("body is jsonrpc, using HandleJsonRpcRequest")
 	return utils.HandleJsonRpcRequest(ctx, body, config.jsonRpcRequestHandler)
 }
 
 func onHttpResponseHeaders(ctx wrapper.HttpContext, config mcpFilterConfig) types.Action {
+	log.Debugf("onHttpResponseHeaders called")
 	if !wrapper.HasResponseBody() || (config.httpResponseHandler == nil && config.jsonRpcResponseHandler == nil) {
+		log.Debugf("no response body or no handler, skip reading body")
 		ctx.DontReadResponseBody()
 		return types.ActionContinue
 	}
+	log.Debugf("has response body and handler, read body")
 	ctx.SetResponseBodyBufferLimit(defaultMaxBodyBytes)
 	return types.HeaderStopIteration
 }
 
 func onHttpResponseBody(ctx wrapper.HttpContext, config mcpFilterConfig, body []byte) types.Action {
+	log.Debugf("onHttpResponseBody called, body size: %d", len(body))
 	if !gjson.GetBytes(body, "jsonrpc").Exists() {
 		if config.httpResponseHandler != nil {
+			log.Debugf("body is not jsonrpc, using httpResponseHandler")
 			headers, err := proxywasm.GetHttpResponseHeaders()
 			if err != nil {
 				log.Errorf("get response headers failed, err:%v", err)
@@ -331,7 +344,9 @@ func onHttpResponseBody(ctx wrapper.HttpContext, config mcpFilterConfig, body []
 			}
 			return config.httpResponseHandler(ctx, config.config, headers, body)
 		}
+		log.Debugf("body is not jsonrpc, but no httpResponseHandler, skip")
 		return types.ActionContinue
 	}
+	log.Debugf("body is jsonrpc, using HandleJsonRpcResponse")
 	return utils.HandleJsonRpcResponse(ctx, body, config.jsonRpcResponseHandler)
 }
