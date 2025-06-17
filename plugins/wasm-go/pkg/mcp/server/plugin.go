@@ -228,7 +228,7 @@ func parseConfig(configJson gjson.Result, config *mcpServerConfig) error {
 	currentServerNameForHandlers := config.serverName
 
 	config.methodHandlers["ping"] = func(ctx wrapper.HttpContext, id utils.JsonRpcID, params gjson.Result) error {
-		utils.OnMCPResponseSuccess(true, ctx, map[string]any{}, fmt.Sprintf("mcp:%s:ping", currentServerNameForHandlers))
+		utils.OnMCPResponseSuccess(ctx, map[string]any{}, fmt.Sprintf("mcp:%s:ping", currentServerNameForHandlers))
 		return nil
 	}
 	config.methodHandlers["notifications/initialized"] = func(ctx wrapper.HttpContext, id utils.JsonRpcID, params gjson.Result) error {
@@ -242,9 +242,9 @@ func parseConfig(configJson gjson.Result, config *mcpServerConfig) error {
 	config.methodHandlers["initialize"] = func(ctx wrapper.HttpContext, id utils.JsonRpcID, params gjson.Result) error {
 		version := params.Get("protocolVersion").String()
 		if version == "" {
-			utils.OnMCPResponseError(true, ctx, errors.New("Unsupported protocol version"), utils.ErrInvalidParams, fmt.Sprintf("mcp:%s:initialize:error", currentServerNameForHandlers))
+			utils.OnMCPResponseError(ctx, errors.New("Unsupported protocol version"), utils.ErrInvalidParams, fmt.Sprintf("mcp:%s:initialize:error", currentServerNameForHandlers))
 		}
-		utils.OnMCPResponseSuccess(true, ctx, map[string]any{
+		utils.OnMCPResponseSuccess(ctx, map[string]any{
 			"protocolVersion": version,
 			"capabilities": map[string]any{
 				"tools": map[string]any{},
@@ -277,7 +277,7 @@ func parseConfig(configJson gjson.Result, config *mcpServerConfig) error {
 				"inputSchema": tool.InputSchema(),
 			})
 		}
-		utils.OnMCPResponseSuccess(true, ctx, map[string]any{
+		utils.OnMCPResponseSuccess(ctx, map[string]any{
 			"tools":      listedTools,
 			"nextCursor": "",
 		}, fmt.Sprintf("mcp:%s:tools/list", currentServerNameForHandlers))
@@ -291,7 +291,7 @@ func parseConfig(configJson gjson.Result, config *mcpServerConfig) error {
 			// If a tools/call request reaches here, it's a misconfiguration or unexpected.
 			errMsg := fmt.Sprintf("tools/call is not supported on a composed toolSet endpoint ('%s'). It should be routed by mcp-router to the target server.", currentServerNameForHandlers)
 			log.Errorf(errMsg)
-			utils.OnMCPResponseError(true, ctx, errors.New(errMsg), utils.ErrMethodNotFound, fmt.Sprintf("mcp:%s:tools/call:not_supported_on_toolset", currentServerNameForHandlers))
+			utils.OnMCPResponseError(ctx, errors.New(errMsg), utils.ErrMethodNotFound, fmt.Sprintf("mcp:%s:tools/call:not_supported_on_toolset", currentServerNameForHandlers))
 			return nil
 		}
 
@@ -301,7 +301,7 @@ func parseConfig(configJson gjson.Result, config *mcpServerConfig) error {
 
 		if len(allowTools) != 0 {
 			if _, allow := allowTools[toolName]; !allow {
-				utils.OnMCPResponseError(true, ctx, fmt.Errorf("Tool not allowed: %s", toolName), utils.ErrInvalidParams, fmt.Sprintf("mcp:%s:tools/call:tool_not_allowed", currentServerNameForHandlers))
+				utils.OnMCPResponseError(ctx, fmt.Errorf("Tool not allowed: %s", toolName), utils.ErrInvalidParams, fmt.Sprintf("mcp:%s:tools/call:tool_not_allowed", currentServerNameForHandlers))
 				return nil
 			}
 		}
@@ -311,7 +311,7 @@ func parseConfig(configJson gjson.Result, config *mcpServerConfig) error {
 
 		toolToCall, ok := config.server.GetMCPTools()[toolName]
 		if !ok {
-			utils.OnMCPResponseError(true, ctx, fmt.Errorf("Unknown tool: %s", toolName), utils.ErrInvalidParams, fmt.Sprintf("mcp:%s:tools/call:invalid_tool_name", currentServerNameForHandlers))
+			utils.OnMCPResponseError(ctx, fmt.Errorf("Unknown tool: %s", toolName), utils.ErrInvalidParams, fmt.Sprintf("mcp:%s:tools/call:invalid_tool_name", currentServerNameForHandlers))
 			return nil
 		}
 
@@ -319,7 +319,7 @@ func parseConfig(configJson gjson.Result, config *mcpServerConfig) error {
 		toolInstance := toolToCall.Create([]byte(args.Raw))
 		err := toolInstance.Call(ctx, config.server) // Pass the single server instance
 		if err != nil {
-			utils.OnMCPToolCallError(true, ctx, err)
+			utils.OnMCPToolCallError(ctx, err)
 			return nil
 		}
 		return nil
