@@ -11,6 +11,7 @@ require (
 	github.com/tidwall/gjson v1.18.0
 	github.com/tidwall/resp v0.1.1
 	github.com/tidwall/sjson v1.2.5
+	google.golang.org/protobuf v1.36.6
 )
 
 require (
